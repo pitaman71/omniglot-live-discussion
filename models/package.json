@@ -45,8 +45,8 @@
     "typescript": "^5.1.3"
   },
   "peerDependencies": {
-    "@pitaman71/omniglot-live-data": "^0.6.61",
-    "@pitaman71/omniglot-live-domains": "^0.6.61",
+    "@pitaman71/omniglot-live-data": "^0.6.66",
+    "@pitaman71/omniglot-live-domains": "^0.6.66",
     "@types/luxon": "^3.4.2",
     "lodash": "^4.17.21",
     "luxon": "^2.1.1",

@@ -3,13 +3,42 @@ import React, { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Objects } from '@pitaman71/omniglot-live-data';
 import { Temporal } from '@pitaman71/omniglot-live-domains';
-import { Apropos, Database, Debug, Proposals } from '@pitaman71/omniglot-live-reactjs';
+import { Apropos, Database, Debug, Proposals, Rendering } from '@pitaman71/omniglot-live-reactjs';
 import { useAuth } from '@pitaman71/auth-reactjs';
+import { DateTime } from '@pitaman71/omniglot-live-logistics-reactjs'
 
 import { Card as CommentCard } from './Comments';
+
 import * as Models from 'omniglot-live-discussion-models';
 
-export function Document(props: { binding: Models.Channels.AChannel}) {
+export function Card(props: { 
+    binding: Models.Channels.AChannel,
+    render: { Image: Rendering.Image }
+}) {
+    const zone = Database.useZone();
+    const participants = Models.Channels.asChat.to(props.binding);
+    const messages = Proposals.useRelation(Models.Channels.HasComment.stream(zone, props.binding));
+    const mostRecent = messages.entries.length ? messages.entries[messages.entries.length-1] : undefined;
+    const atTime = Proposals.useScalarProperty(!mostRecent ? undefined : Models.Comments.AtTime.stream(zone, { comment: mostRecent.comment }).scalar);
+    const hasBody = Proposals.useScalarProperty(!mostRecent ? undefined : Models.Comments.HasBody.stream(zone, { comment: mostRecent.comment }).scalar);
+    return (
+        <div className="card discussion-channel">
+            <div className="card-overlay">
+                <div className="card-prop title">
+                    <DateTime.Summary kind="scalar" scalar={atTime}/>
+                </div>
+                <div className="card-prop author">
+                    { participants.map(participant => <props.render.Image binding={{ participant }}/>) }
+                </div>
+                <div className="card-prop caption">
+                    {hasBody.value}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+export function Document(props: { binding: Models.Channels.AChannel }) {
     const zone = Database.useZone();
     const [inputMessage, setInputMessage] = useState<string>('');
     
@@ -34,7 +63,10 @@ export function Document(props: { binding: Models.Channels.AChannel}) {
             // Clear input before sending
             setInputMessage('');
             atTime.client.assign(atTime_);
-            hasAuthor.client.assign([{ comment, ...hasAuthor_}])
+            hasAuthor.client.assign([{ comment, ...hasAuthor_}]);
+            hasBody.client.assign(inputMessage);
+            hasComment.client.insert({ channel: props.binding.channel, comment });
+            zone.commitAll();
         }
     };
 
