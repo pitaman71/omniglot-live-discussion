@@ -139,22 +139,49 @@ const styles = Styles.createStyles('channels', {
     }
 });
 
-export function Participants(props: { 
+interface Render {
+    Image: Rendering.Image<{ participant: Objects.Binding<string> }>,
+    Label: (binding: { participant: Objects.Binding<string>}) => string|undefined,
+}
+export function ParticipantImages(props: { 
     binding: Models.Channels.AChannel,
-    render: { Image: Rendering.Image<{ participant: Objects.Binding<string> }> }
+    render: Render,
+    except: Objects.Binding<string>
 }) {
     const zone = Database.useZone();
     const participants = Models.Channels.asChat.to(props.binding);
     
-    return <>{ participants.map((participant, index) => <props.render.Image key={participant.objectId || index} binding={{ participant }}/>) }</>
+    return <>{ participants
+        .filter(participant => participant.objectId !== props.except.objectId).map((participant, index) => <props.render.Image key={participant.objectId || index} binding={{ participant }}/>) }</>
+}
+
+export function ParticipantNames(
+    binding: Models.Channels.AChannel,
+    render: Render,
+    except: Objects.Binding<string>,
+    empty: string
+) {
+    const zone = Database.useZone();
+    const participants = Models.Channels.asChat.to(binding);
+
+    if(participants.length === 0) return empty
+    
+    return participants.filter(participant => participant.objectId !== except.objectId).map((participant, index) => {
+        const prefix = index > 0 ? ', ' : '';
+        const suffix = render.Label({ participant });
+        return prefix+suffix
+    }).join('');
 }
 
 export function Card(props: { 
     binding: Models.Channels.AChannel,
-    render: { Image: Rendering.Image<{ participant: Objects.Binding<string> }> }
+    render: Render
 }) {
     const zone = Database.useZone();
     const participants = Models.Channels.asChat.to(props.binding);
+    const { user } = useAuth();
+    const me = Objects.Binding.from_bound(user?.id || '?');    
+
     const messages = Proposals.useRelation(Models.Channels.HasComment.stream(zone, props.binding));
     const mostRecent = messages.entries.length ? messages.entries[messages.entries.length-1] : undefined;
     const atTime = Proposals.useScalarProperty(!mostRecent ? undefined : Models.Comments.AtTime.stream(zone, { comment: mostRecent.comment }).scalar);
@@ -166,7 +193,7 @@ export function Card(props: {
         <DateTime.Summary kind="scalar" scalar={atTime}/>
         </div>
         <div className={`${styles.cardProp} ${styles.author}`}>
-        <Participants {...props}/>
+        <ParticipantImages {...props} except={me}/>
         </div>
         <div className={`${styles.cardProp} ${styles.caption}`}>
         {hasBody.value}
@@ -178,17 +205,18 @@ export function Card(props: {
 
 function Input(props: { 
     binding: Models.Channels.AChannel,
-    render: { Image: Rendering.Image<{ participant: Objects.Binding<string> }> }
+    render: Render
 }) {
     const zone = Database.useZone();
     const [inputMessage, setInputMessage] = useState<string>('');
     const { user } = useAuth();
-    
+    const me = Objects.Binding.from_bound(user?.id || '?');    
+
     const sendMessage = async () => {
         if (!inputMessage.trim()) return;
         const timestamp = new Date().toISOString();
         const atTime_ = Temporal.DateTimeDomain.asString({ standard: 'iso8601', definition: 'DateTime' })?.from(timestamp);
-        const hasAuthor_ = user && { author: Objects.Binding.from_bound(user.id)}
+        const hasAuthor_ = user && { author: me }
         
         const comment = Objects.Binding.from_bound(uuidv4());
         const clients = {
@@ -224,18 +252,18 @@ function Input(props: {
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={"Type your message..." }
+            placeholder={"Type your message to "+ParticipantNames(props.binding, props.render, me, 'the group')}
         />
         <button className={styles.sendButton} onClick={sendMessage}>Send</button>
     </>
 }
 export function Messages(props: { 
     binding: Models.Channels.AChannel,
-    render: { Image: Rendering.Image<{ participant: Objects.Binding<string> }> }
+    render: Render
 }) {
     const zone = Database.useZone();
     const poll = Database.usePoll();
-    useInterval(poll, 2000);
+    useInterval(() => poll().catch(err => console.error(err)), 2000);
 
     const { user } = useAuth();
     const messages = Proposals.useRelation(Models.Channels.HasComment.stream(zone, props.binding))
@@ -247,14 +275,16 @@ export function Messages(props: {
 
 export function Document(props: { 
     binding: Models.Channels.AChannel,
-    render: { Image: Rendering.Image<{ participant: Objects.Binding<string> }> }
+    render: Render
 }) {    
+    const { user } = useAuth();
+    const me = Objects.Binding.from_bound(user?.id || '?');    
     return (
         <Debug.Boundary name="channel-document-view">
             <Database.AsEditor peerId="channel-messages">
             <div className={styles.document}>
                 <div className={styles.channelHeader}>
-                    <Participants {...props}/>
+                    <ParticipantImages {...props} except={me}/>
                 </div>
                 <div className={styles.channelMessages}>
                     <Messages {...props}/>
