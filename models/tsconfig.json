@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
+    "target": "ES2020",
     "module": "CommonJS",
+    "moduleResolution": "Node",
     "declaration": true,
     "removeComments": true,
-    "moduleResolution": "node",
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2020",
     "sourceMap": true,
     "outDir": "lib",
     "incremental": true,
