@@ -6,7 +6,8 @@ import { AChannel } from './Channels';
 
 export const directory = new Definitions.Directory();
 
-export type ToChannel =  AChannel & { participant: Objects.Binding<string> };
+export interface AParticipant extends Objects.BindingType<string> { participant: Objects.Binding<string> };
+export type ToChannel =  AChannel & AParticipant;
 
 function makePath(suffix: string) {
     return `omniglot-live-discussion.Authorization.${suffix}`;
@@ -34,6 +35,30 @@ export const HasAuthorizedParticipants = new Relations.Descriptor<ToChannel>(
         builder.symbol('participant', 'person or account who has access');
     }
 );
+
+export const authorize: (zone: Stores.Zone, binding: ToChannel) => undefined|(() => void) = (zone, binding) => {
+    const hasAuthorizedChannels = HasAuthorizedChannels.stream(zone, { participant: binding.participant });
+    const hasAuthorizedChannels_ = hasAuthorizedChannels.stateful();
+    const hasAuthorizedParticipants = HasAuthorizedParticipants.stream(zone, { channel: binding.channel });
+    const hasAuthorizedParticipants_ = hasAuthorizedParticipants.stateful();
+    if(!hasAuthorizedChannels_ || !hasAuthorizedParticipants_) return undefined;
+    return () => {
+        hasAuthorizedChannels_.insert(binding);
+        hasAuthorizedParticipants_.insert(binding);
+    }
+}
+
+export const deauthorize: (zone: Stores.Zone, binding: ToChannel) => undefined|(() => void) = (zone, binding) => {
+    const hasAuthorizedChannels = HasAuthorizedChannels.stream(zone, { participant: binding.participant });
+    const hasAuthorizedChannels_ = hasAuthorizedChannels.stateful();
+    const hasAuthorizedParticipants = HasAuthorizedParticipants.stream(zone, { channel: binding.channel });
+    const hasAuthorizedParticipants_ = hasAuthorizedParticipants.stateful();
+    if(!hasAuthorizedChannels_ || !hasAuthorizedParticipants_) return undefined;
+    return () => {
+        hasAuthorizedChannels_.remove(binding);
+        hasAuthorizedParticipants_.remove(binding);
+    }
+}
 
 directory.add(HasAuthorizedParticipants);
         

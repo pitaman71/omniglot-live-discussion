@@ -1,10 +1,6 @@
 import _ from 'lodash';
-import React, { useState, useEffect, useRef } from 'react';
 import Markdown from 'react-markdown';
-import { Dot } from 'react-animated-dots';
-import { Objects } from '@pitaman71/omniglot-live-data';
-import { Temporal } from '@pitaman71/omniglot-live-domains';
-import { Apropos, Database, Debug, Proposals, Styles } from '@pitaman71/omniglot-live-reactjs';
+import { Database, Proposals, Rendering, Styles } from '@pitaman71/omniglot-live-reactjs';
 
 import { Comments as CommentsModel, Channels as ChannelsModel } from '@pitaman71/omniglot-live-discussion-models';
 
@@ -56,7 +52,7 @@ const styles = Styles.createStyles('comments', {
   }
 });
 
-export function Card(props: { me: string, binding: CommentsModel.AComment}) {
+export function Card(props: Rendering.OnProps & { me: string, binding: CommentsModel.AComment}) {
     const zone = Database.useZone();
     const comment = props.binding.comment;
     const atTime = Proposals.useScalarProperty(CommentsModel.AtTime.stream(zone, { comment }).scalar);
@@ -65,9 +61,8 @@ export function Card(props: { me: string, binding: CommentsModel.AComment}) {
     const hasComment = Proposals.useRelation(ChannelsModel.HasComment.stream(zone, props.binding));
 
     const isMe = hasAuthor.entries.filter(entry => entry.author.objectId === props.me).length > 0;
-
     return (
-        <div className={styles.messageContainer}>
+        <div className={styles.messageContainer} {...Rendering.onProps(props)}>
             <div 
                 key={comment.objectId} 
                 className={`${styles.message} ${isMe ? styles.userMessage : styles.assistantMessage}`}

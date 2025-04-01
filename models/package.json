@@ -1,6 +1,6 @@
 {
   "name": "@pitaman71/omniglot-live-discussion-models",
-  "version": "0.6.19",
+  "version": "0.6.25",
   "description": "Persistent storage and optimized services for direct messaging and content management",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

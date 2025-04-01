@@ -1,5 +1,7 @@
 import { Dialogues, Definitions, Objects, Properties, Relations, Stores, Streams, Values } from '@pitaman71/omniglot-live-data';
 import { AComment } from './Comments';
+import * as Interfaces from './Interfaces';
+import * as Connections from './Connections';
 
 export const directory = new Definitions.Directory();
 
@@ -27,5 +29,32 @@ export const HasComment = new Relations.Descriptor<AChannel & AComment>(
     }
 );
 
+export const ReadAccess: Connections.Descriptors<AChannel> = {
+    hasComment: Connections.Read(HasComment)
+};
+
+export const WriteAccess: Connections.Descriptors<AChannel> = {
+    hasComment: Connections.Write(HasComment)
+};
+
+export const Direct = new Interfaces.Descriptor<AChannel, typeof WriteAccess>(makePath('Descriptors'), WriteAccess);
+
 directory.add(HasComment);
-        
+
+export const addComment: (zone: Stores.Zone, binding: AChannel) => undefined|((
+    comment: AComment
+) => void) = (zone, binding) => {
+    const hasComment = HasComment.stream(zone, binding);
+    const hasComment_ = hasComment.stateful();
+    if(!hasComment_) return undefined;
+    return (comment) => hasComment_.insert({ ...binding, ...comment });
+}
+
+export const removeComment: (zone: Stores.Zone, binding: AChannel) => undefined|((
+    comment: AComment
+) => void) = (zone, binding) => {
+    const hasComment = HasComment.stream(zone, binding);
+    const hasComment_ = hasComment.stateful();
+    if(!hasComment_) return undefined;
+    return (comment) => hasComment_.remove({ ...binding, ...comment });
+}

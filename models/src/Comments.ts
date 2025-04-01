@@ -1,6 +1,8 @@
 import { Dialogues, Definitions, Objects, Properties, Relations, Stores, Streams, Values } from '@pitaman71/omniglot-live-data';
 import { Temporal } from '@pitaman71/omniglot-live-domains';
-import * as Introspection from 'typescript-introspection';
+
+import * as Connections from './Connections';
+import * as Interfaces from './Interfaces';
 
 export const directory = new Definitions.Directory();
 
@@ -37,5 +39,26 @@ export const HasBody = new Properties.Descriptor<AComment, string>(
         builder.scalar(Values.TheStringDomain);
     }
 );
+
+export const ReadAccess: Connections.Descriptors<AComment> = {
+    atTime: Connections.Read(AtTime),
+    hasAuthor: Connections.Read(HasAuthor),
+    hasBody: Connections.Read(HasBody)
+};
+
+export const WriteAccess: Connections.Descriptors<AComment> = {
+    atTime: Connections.Write(AtTime),
+    hasAuthor: Connections.Write(HasAuthor),
+    hasBody: Connections.Write(HasBody)
+};
+
+export const Direct = new Interfaces.Descriptor<AComment, typeof WriteAccess>(makePath('Descriptors'), WriteAccess);
+
+export const modify = (zone: Stores.Zone, binding: AComment) => {
+    const atTime = AtTime.stream(zone, binding).scalar?.stateful();
+    const hasAuthor = HasAuthor.stream(zone, binding)?.stateful();
+    const hasBody = HasBody.stream(zone, binding).scalar?.stateful();
+    return { atTime, hasAuthor, hasBody };
+}
 
 directory.add(AtTime, HasAuthor, HasBody);

@@ -41,6 +41,7 @@ const styles = Styles.createStyles('channels', {
     },
     cardProp: {
         margin: 4,
+        justifyContent: 'center'
     },
     title: {
         fontWeight: 'bold',
@@ -140,31 +141,31 @@ const styles = Styles.createStyles('channels', {
 });
 
 interface Render {
-    Image: Rendering.Image<{ participant: Objects.Binding<string> }>,
-    Label: (binding: { participant: Objects.Binding<string>}) => string|undefined,
+    Image: Rendering.Image<Models.Participants.AParticipant>,
+    Label: Rendering.Label<Models.Participants.AParticipant>
 }
-export function ParticipantImages(props: { 
+export function ParticipantImages(props: Rendering.OnProps & { 
     binding: Models.Channels.AChannel,
     render: Render,
-    except: Objects.Binding<string>
+    except: Objects.Binding<string>,
 }) {
     const zone = Database.useZone();
     const participants = Models.Channels.asChat.to(props.binding);
     
     return <>{ participants
-        .filter(participant => participant.objectId !== props.except.objectId).map((participant, index) => <props.render.Image key={participant.objectId || index} binding={{ participant }}/>) }</>
+        .filter(participant => participant.objectId !== props.except.objectId).map((participant, index) => <props.render.Image key={participant.objectId || index} binding={{ participant }} {...Rendering.onProps(props)}/>) }</>
 }
 
 export function ParticipantNames(
     binding: Models.Channels.AChannel,
     render: Render,
     except: Objects.Binding<string>,
-    empty: string
+    empty?: string
 ) {
     const zone = Database.useZone();
     const participants = Models.Channels.asChat.to(binding);
 
-    if(participants.length === 0) return empty
+    if(participants.length === 0) return empty || '';
     
     return participants.filter(participant => participant.objectId !== except.objectId).map((participant, index) => {
         const prefix = index > 0 ? ', ' : '';
@@ -173,7 +174,7 @@ export function ParticipantNames(
     }).join('');
 }
 
-export function Card(props: { 
+export function Card(props: Rendering.OnProps & { 
     binding: Models.Channels.AChannel,
     render: Render
 }) {
@@ -187,18 +188,19 @@ export function Card(props: {
     const atTime = Proposals.useScalarProperty(!mostRecent ? undefined : Models.Comments.AtTime.stream(zone, { comment: mostRecent.comment }).scalar);
     const hasBody = Proposals.useScalarProperty(!mostRecent ? undefined : Models.Comments.HasBody.stream(zone, { comment: mostRecent.comment }).scalar);
     return (
-        <div className={styles.card}>
-        <div className={styles.cardOverlay}>
-        <div className={`${styles.cardProp} ${styles.title}`}>
-        <DateTime.Summary kind="scalar" scalar={atTime}/>
-        </div>
-        <div className={`${styles.cardProp} ${styles.author}`}>
-        <ParticipantImages {...props} except={me}/>
-        </div>
-        <div className={`${styles.cardProp} ${styles.caption}`}>
-        {hasBody.value}
-        </div>
-        </div>
+        <div className={styles.card}  {...Rendering.onProps(props)}>
+            <div className={styles.cardOverlay}  {...Rendering.onProps(props)}>
+                <div className={`${styles.cardProp} ${styles.title}`}  {...Rendering.onProps(props)}>
+                    { ParticipantNames(props.binding, props.render, me) }
+                { /* <DateTime.Summary kind="scalar" scalar={atTime}/> */ }
+                </div>
+                <div className={`${styles.cardProp} ${styles.author}`}  {...Rendering.onProps(props)}>
+                <ParticipantImages {...props} except={me}  {...Rendering.onProps(props)}/>
+                </div>
+                <div className={`${styles.cardProp} ${styles.caption}`}  {...Rendering.onProps(props)}>
+                {hasBody.value}
+                </div>
+            </div>
         </div>
     )
 }
@@ -257,7 +259,7 @@ function Input(props: {
         <button className={styles.sendButton} onClick={sendMessage}>Send</button>
     </>
 }
-export function Messages(props: { 
+export function Messages(props: Rendering.OnProps & { 
     binding: Models.Channels.AChannel,
     render: Render
 }) {
@@ -273,18 +275,19 @@ export function Messages(props: {
         ));
 }
 
-export function Document(props: { 
+export function Document(props: Rendering.OnProps & { 
     binding: Models.Channels.AChannel,
     render: Render
 }) {    
     const { user } = useAuth();
     const me = Objects.Binding.from_bound(user?.id || '?');    
+    
     return (
         <Debug.Boundary name="channel-document-view">
             <Database.AsEditor peerId="channel-messages">
             <div className={styles.document}>
                 <div className={styles.channelHeader}>
-                    <ParticipantImages {...props} except={me}/>
+                    <ParticipantImages {...props} except={me} {...Rendering.onProps(props)}/>
                 </div>
                 <div className={styles.channelMessages}>
                     <Messages {...props}/>
